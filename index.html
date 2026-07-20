@@ -1,17 +1,6 @@
 <!DOCTYPE html>
 <html lang="ja">
-<head>
-    <meta charset="UTF-8">
-    <title>リアルタイム YouTube プレイヤー</title>
-    <style>
-        body { font-family: sans-serif; }
-        #player-container { margin-top: 20px; }
-        iframe { width: 560px; height: 315px; border: none; }
-        #video-title { font-size: 1.2em; font-weight: bold; margin-top: 10px; }
-    </style>
-</head>
 <body>
-
     <h1>YouTube プレイヤー</h1>
     <div id="player-container">読み込み中...</div>
     <div id="video-title"></div>
@@ -22,39 +11,37 @@
 
         async function updatePlayer() {
             try {
-                // キャッシュ回避のためタイムスタンプを付与
                 const response = await fetch(`${fileName}?t=${Date.now()}`);
                 const text = await response.text();
                 
-                // カンマ区切りのデータを取り出す
+                // デバッグ用：読み込んだ中身をコンソールに表示
+                console.log("読み込んだ中身:", text);
+
                 const parts = text.split(',');
                 const title = parts[0] ? parts[0].trim() : "タイトルなし";
-                const url = parts[1] ? parts[1].trim() : "";
+                // リンクが2番目にあるかチェック
+                const url = parts[1] ? parts[1].trim() : text.trim(); 
                 
                 const videoId = extractYouTubeId(url);
+                console.log("抽出したID:", videoId);
 
                 if (videoId && videoId !== lastVideoId) {
                     lastVideoId = videoId;
-                    
-                    // プレイヤーを更新
                     document.getElementById('player-container').innerHTML = 
                         `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
-                    
-                    // タイトルを更新
                     document.getElementById('video-title').innerText = title;
                 }
             } catch (err) {
-                console.log('読み込み待機中...');
+                console.error('読み込みエラー:', err);
             }
         }
 
         function extractYouTubeId(url) {
-            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
-            const match = url.match(regExp);
-            return (match && match[2].length === 11) ? match[2] : null;
+            // より広くURLを拾う正規表現
+            const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/ ]{11})/);
+            return (match && match[1]) ? match[1] : null;
         }
 
-        // 1秒ごとに実行
         setInterval(updatePlayer, 1000);
         updatePlayer();
     </script>
