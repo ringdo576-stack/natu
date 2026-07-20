@@ -1,9 +1,48 @@
 <!DOCTYPE html>
 <html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube プレイヤー</title>
+    <style>
+        /* 画面全体を中央寄せにする設定 */
+        body {
+            display: flex;
+            flex-direction: column;
+            align-items: center; /* 左右中央 */
+            justify-content: center; /* 上下中央 */
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+
+        /* プレイヤーを少し右にずらすためのコンテナ */
+        #wrapper {
+            margin-left: 50px; /* ここで右へのずれを調整できます */
+            text-align: center;
+        }
+
+        /* プレイヤーのサイズを大きくする */
+        iframe {
+            width: 800px;  /* 横幅を拡大 */
+            height: 450px; /* 縦幅を拡大 */
+            border: 5px solid #333; /* 枠線で見やすく */
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+
+        #video-title {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin-top: 15px;
+            color: #333;
+        }
+    </style>
+</head>
 <body>
-    <h1>YouTube プレイヤー</h1>
-    <div id="player-container">読み込み中...</div>
-    <div id="video-title"></div>
+
+    <div id="wrapper">
+        <div id="player-container">読み込み中...</div>
+        <div id="video-title"></div>
+    </div>
 
     <script>
         const fileName = 'links.txt';
@@ -14,16 +53,11 @@
                 const response = await fetch(`${fileName}?t=${Date.now()}`);
                 const text = await response.text();
                 
-                // デバッグ用：読み込んだ中身をコンソールに表示
-                console.log("読み込んだ中身:", text);
-
                 const parts = text.split(',');
                 const title = parts[0] ? parts[0].trim() : "タイトルなし";
-                // リンクが2番目にあるかチェック
-                const url = parts[1] ? parts[1].trim() : text.trim(); 
+                const url = parts[1] ? parts[1].trim() : text.trim();
                 
                 const videoId = extractYouTubeId(url);
-                console.log("抽出したID:", videoId);
 
                 if (videoId && videoId !== lastVideoId) {
                     lastVideoId = videoId;
@@ -32,12 +66,11 @@
                     document.getElementById('video-title').innerText = title;
                 }
             } catch (err) {
-                console.error('読み込みエラー:', err);
+                console.log('読み込み待機中...');
             }
         }
 
         function extractYouTubeId(url) {
-            // より広くURLを拾う正規表現
             const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/ ]{11})/);
             return (match && match[1]) ? match[1] : null;
         }
