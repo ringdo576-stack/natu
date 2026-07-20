@@ -2,53 +2,57 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>YouTube プレイヤー</title>
+    <title>リアルタイム YouTube プレイヤー</title>
     <style>
         #player-container { margin-top: 20px; }
         iframe { width: 560px; height: 315px; border: none; }
+        .status { font-size: 0.8em; color: #666; }
     </style>
 </head>
 <body>
 
-    <h1>YouTube プレイヤー</h1>
+    <h1>YouTube プレイヤー (リアルタイム)</h1>
     <div id="player-container">読み込み中...</div>
+    <div class="status">3秒ごとにファイルを監視しています</div>
 
     <script>
-        // txtファイルの名前
         const fileName = 'links.txt';
+        let lastVideoId = null; // 前回の動画IDを保持
 
-        async function loadAndPlay() {
+        async function checkAndPlay() {
             try {
-                const response = await fetch(fileName);
+                // キャッシュを避けるためにタイムスタンプを付与して取得
+                const response = await fetch(`${fileName}?t=${Date.now()}`);
                 const text = await response.text();
                 
-                // テキストからURLを探す（簡易的な正規表現）
                 const urlMatch = text.match(/(https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/[^\s]+)/);
-
+                
                 if (urlMatch) {
                     const videoId = extractYouTubeId(urlMatch[0]);
-                    if (videoId) {
+                    
+                    // 動画IDが新しくなっている場合のみDOMを更新
+                    if (videoId && videoId !== lastVideoId) {
+                        lastVideoId = videoId;
                         document.getElementById('player-container').innerHTML = 
-                            `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
-                    } else {
-                        document.getElementById('player-container').innerText = '有効なYouTube動画が見つかりませんでした。';
+                            `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
                     }
-                } else {
-                    document.getElementById('player-container').innerText = 'URLが見つかりませんでした。';
                 }
             } catch (err) {
-                document.getElementById('player-container').innerText = 'ファイルの読み込みに失敗しました。ローカルサーバーを使用していますか？';
+                console.error('読み込みエラー:', err);
             }
         }
 
-        // YouTubeのURLからIDを抜き出す関数
         function extractYouTubeId(url) {
             const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
             const match = url.match(regExp);
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        loadAndPlay();
+        // 3000ミリ秒(3秒)ごとに実行
+        setInterval(checkAndPlay, 3000);
+        
+        // 初回実行
+        checkAndPlay();
     </script>
 </body>
 </html>
