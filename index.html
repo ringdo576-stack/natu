@@ -4,41 +4,47 @@
     <meta charset="UTF-8">
     <title>リアルタイム YouTube プレイヤー</title>
     <style>
+        body { font-family: sans-serif; }
         #player-container { margin-top: 20px; }
         iframe { width: 560px; height: 315px; border: none; }
-        .status { font-size: 0.8em; color: #666; }
+        #video-title { font-size: 1.2em; font-weight: bold; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <h1>YouTube プレイヤー (リアルタイム)</h1>
+    <h1>YouTube プレイヤー</h1>
     <div id="player-container">読み込み中...</div>
-    <div class="status">3秒ごとにファイルを監視しています</div>
+    <div id="video-title"></div>
 
     <script>
         const fileName = 'links.txt';
-        let lastVideoId = null; // 前回の動画IDを保持
+        let lastVideoId = null;
 
-        async function checkAndPlay() {
+        async function updatePlayer() {
             try {
-                // キャッシュを避けるためにタイムスタンプを付与して取得
+                // キャッシュ回避のためタイムスタンプを付与
                 const response = await fetch(`${fileName}?t=${Date.now()}`);
                 const text = await response.text();
                 
-                const urlMatch = text.match(/(https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/[^\s]+)/);
+                // カンマ区切りのデータを取り出す
+                const parts = text.split(',');
+                const title = parts[0] ? parts[0].trim() : "タイトルなし";
+                const url = parts[1] ? parts[1].trim() : "";
                 
-                if (urlMatch) {
-                    const videoId = extractYouTubeId(urlMatch[0]);
+                const videoId = extractYouTubeId(url);
+
+                if (videoId && videoId !== lastVideoId) {
+                    lastVideoId = videoId;
                     
-                    // 動画IDが新しくなっている場合のみDOMを更新
-                    if (videoId && videoId !== lastVideoId) {
-                        lastVideoId = videoId;
-                        document.getElementById('player-container').innerHTML = 
-                            `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
-                    }
+                    // プレイヤーを更新
+                    document.getElementById('player-container').innerHTML = 
+                        `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
+                    
+                    // タイトルを更新
+                    document.getElementById('video-title').innerText = title;
                 }
             } catch (err) {
-                console.error('読み込みエラー:', err);
+                console.log('読み込み待機中...');
             }
         }
 
@@ -48,11 +54,9 @@
             return (match && match[2].length === 11) ? match[2] : null;
         }
 
-        // 3000ミリ秒(3秒)ごとに実行
-        setInterval(checkAndPlay, 3000);
-        
-        // 初回実行
-        checkAndPlay();
+        // 1秒ごとに実行
+        setInterval(updatePlayer, 1000);
+        updatePlayer();
     </script>
 </body>
 </html>
