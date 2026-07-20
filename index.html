@@ -1,1 +1,54 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>YouTube プレイヤー</title>
+    <style>
+        #player-container { margin-top: 20px; }
+        iframe { width: 560px; height: 315px; border: none; }
+    </style>
+</head>
+<body>
 
+    <h1>YouTube プレイヤー</h1>
+    <div id="player-container">読み込み中...</div>
+
+    <script>
+        // txtファイルの名前
+        const fileName = 'links.txt';
+
+        async function loadAndPlay() {
+            try {
+                const response = await fetch(fileName);
+                const text = await response.text();
+                
+                // テキストからURLを探す（簡易的な正規表現）
+                const urlMatch = text.match(/(https?:\/\/(www\.)?(youtube\.com|youtu\.be)\/[^\s]+)/);
+
+                if (urlMatch) {
+                    const videoId = extractYouTubeId(urlMatch[0]);
+                    if (videoId) {
+                        document.getElementById('player-container').innerHTML = 
+                            `<iframe src="https://www.youtube.com/embed/${videoId}" allowfullscreen></iframe>`;
+                    } else {
+                        document.getElementById('player-container').innerText = '有効なYouTube動画が見つかりませんでした。';
+                    }
+                } else {
+                    document.getElementById('player-container').innerText = 'URLが見つかりませんでした。';
+                }
+            } catch (err) {
+                document.getElementById('player-container').innerText = 'ファイルの読み込みに失敗しました。ローカルサーバーを使用していますか？';
+            }
+        }
+
+        // YouTubeのURLからIDを抜き出す関数
+        function extractYouTubeId(url) {
+            const regExp = /^.*(youtu.be\/|v\/|u\/\w\/|embed\/|watch\?v=|\&v=)([^#\&\?]*).*/;
+            const match = url.match(regExp);
+            return (match && match[2].length === 11) ? match[2] : null;
+        }
+
+        loadAndPlay();
+    </script>
+</body>
+</html>
