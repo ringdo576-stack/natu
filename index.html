@@ -2,81 +2,116 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <title>YouTube プレイヤー</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>THE ANIMATION</title>
     <style>
-        /* 画面全体を中央寄せにする設定 */
-        body {
-            display: flex;
-            flex-direction: column;
-            align-items: center; /* 左右中央 */
-            justify-content: center; /* 上下中央 */
-            min-height: 100vh;
-            margin: 0;
-            background-color: #f0f0f0;
+        body { 
+            /* 背景画像を設定 */
+            background-image: url('h.jpg');
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            background-repeat: no-repeat;
+            
+            /* 画像の上に黒い透過レイヤーを重ねて動画を見やすくする */
+            background-color: rgba(0, 0, 0, 0.6);
+            background-blend-mode: multiply;
+
+            min-height: 100vh; margin: 0; padding: 120px 80px;
+            font-family: 'Inter', -apple-system, sans-serif;
+            color: #fff; box-sizing: border-box;
         }
 
-        /* プレイヤーを少し右にずらすためのコンテナ */
-        #wrapper {
-            margin-left: 50px; /* ここで右へのずれを調整できます */
-            text-align: center;
+        .logo {
+            position: fixed; top: 50px; left: 80px;
+            font-size: 0.8rem; font-weight: 900;
+            letter-spacing: 8px; text-transform: uppercase; opacity: 0.6;
         }
 
-        /* プレイヤーのサイズを大きくする */
-        iframe {
-            width: 800px;  /* 横幅を拡大 */
-            height: 450px; /* 縦幅を拡大 */
-            border: 5px solid #333; /* 枠線で見やすく */
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        .controls {
+            position: fixed; top: 50px; right: 80px;
+            color: rgba(255,255,255,0.6); font-size: 0.7rem;
+            cursor: pointer; letter-spacing: 2px;
         }
 
-        #video-title {
-            font-size: 1.5em;
-            font-weight: bold;
-            margin-top: 15px;
-            color: #333;
+        .container {
+            display: grid;
+            gap: 100px;
+            justify-content: center;
+            margin: 0 auto;
+            max-width: 1800px;
+            width: 100%;
+        }
+
+        .player-wrapper {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 10px;
+            border-radius: 30px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            transition: transform 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .player-wrapper:hover { transform: scale(1.02); }
+
+        iframe { 
+            width: 100%; aspect-ratio: 16 / 9;
+            border: none; border-radius: 20px; 
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+        }
+
+        @media (max-width: 1024px) {
+            body { padding: 60px 30px; }
+            .container { gap: 50px; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)) !important; }
         }
     </style>
 </head>
 <body>
 
-    <div id="wrapper">
-        <div id="player-container">読み込み中...</div>
-        <div id="video-title"></div>
-    </div>
+    <div class="logo">THE ANIMATION</div>
+    <div class="controls" onclick="nextCols()">GRID: <span id="col-val">2</span></div>
+    <div class="container" id="main-container" style="grid-template-columns: repeat(2, minmax(0, 1fr));"></div>
 
     <script>
         const fileName = 'links.txt';
-        let lastVideoId = null;
+        const container = document.getElementById('main-container');
+        let currentCols = 2;
+        let lastRawText = "";
 
-        async function updatePlayer() {
+        function nextCols() {
+            currentCols = (currentCols >= 5) ? 2 : currentCols + 1;
+            container.style.gridTemplateColumns = `repeat(${currentCols}, minmax(0, 1fr))`;
+            document.getElementById('col-val').innerText = currentCols;
+        }
+
+        async function updatePlayers() {
             try {
                 const response = await fetch(`${fileName}?t=${Date.now()}`);
                 const text = await response.text();
-                
-                const parts = text.split(',');
-                const title = parts[0] ? parts[0].trim() : "タイトルなし";
-                const url = parts[1] ? parts[1].trim() : text.trim();
-                
-                const videoId = extractYouTubeId(url);
+                if (text === lastRawText) return;
+                lastRawText = text;
 
-                if (videoId && videoId !== lastVideoId) {
-                    lastVideoId = videoId;
-                    document.getElementById('player-container').innerHTML = 
-                        `<iframe src="https://www.youtube.com/embed/${videoId}?autoplay=1" allow="autoplay; fullscreen" allowfullscreen></iframe>`;
-                    document.getElementById('video-title').innerText = title;
-                }
-            } catch (err) {
-                console.log('読み込み待機中...');
-            }
+                container.innerHTML = ""; 
+                const lines = text.split(/\r?\n/);
+
+                lines.forEach(line => {
+                    if (!line.trim()) return;
+                    const parts = line.split(',');
+                    const url = parts.length > 1 ? parts[1].trim() : parts[0].trim();
+                    const videoId = url.match(/([a-zA-Z0-9_-]{11})/)?.[1];
+
+                    if (videoId) {
+                        const div = document.createElement('div');
+                        div.className = 'player-wrapper';
+                        div.innerHTML = `<iframe src="https://www.youtube.com/embed/${videoId}" allow="fullscreen" allowfullscreen></iframe>`;
+                        container.appendChild(div);
+                    }
+                });
+            } catch (e) {}
         }
 
-        function extractYouTubeId(url) {
-            const match = url.match(/(?:youtu\.be\/|youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=))([^"&?\/ ]{11})/);
-            return (match && match[1]) ? match[1] : null;
-        }
-
-        setInterval(updatePlayer, 1000);
-        updatePlayer();
+        setInterval(updatePlayers, 1000);
+        updatePlayers();
     </script>
 </body>
 </html>
